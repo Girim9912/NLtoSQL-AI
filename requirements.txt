@@ -1,0 +1,40 @@
+# Core Dependencies
+numpy>=1.23.0
+pandas>=1.5.0
+scikit-learn>=1.1.0
+torch>=2.0.0
+transformers>=4.26.0
+datasets>=2.10.0
+
+# NLP Libraries
+spacy>=3.5.0
+nltk>=3.8.0
+stanza>=1.4.0
+
+# SQL Processing
+sqlglot>=10.6.0
+sqlparse>=0.4.3
+sqlalchemy>=2.0.0
+
+# API Development
+fastapi>=0.95.0
+uvicorn>=0.21.0
+pydantic>=1.10.7
+
+# Data Processing
+pyarrow>=11.0.0
+duckdb>=0.7.0
+
+# Development Tools
+pytest>=7.3.0
+black>=23.3.0
+flake8>=6.0.0
+isort>=5.12.0
+jupyter>=1.0.0
+
+# Documentation
+sphinx>=6.1.0
+sphinx-rtd-theme>=1.2.0
+
+# Containerization
+docker>=6.0.0
