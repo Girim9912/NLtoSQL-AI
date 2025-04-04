@@ -52,5 +52,10 @@ See [ROADMAP.md](./roadmap.md) for the detailed development plan.
 ## 👨‍💻 About the Developer
 This project is being developed by Giri Merugu as part of an entrepreneurial self-employment venture during OPT (Optional Practical Training). The work directly relates to my academic background in Data Science and professional experience in NLP and AI.
     
-## 📄 License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## Usage
+
+To use NLtoSQL-AI, follow these steps:
+
+1. **Clone the Repository**:
+   ```bash
+   git clone https://github.com/Girim9912/NLtoSQL-AI.git
