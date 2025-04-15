@@ -4,9 +4,20 @@ from pydantic import BaseModel
 import sqlite3
 import requests
 import re
+import os
+from dotenv import load_dotenv
 
-# 🔐 DeepInfra API Key (replace this with your actual key)
-DEEPINFRA_API_KEY = "3Mudo9Hv8vmwLzs2UvQMb4fPBbkewT5q"
+# Load environment variables
+load_dotenv()
+
+# Get API key from environment variables
+DEEPINFRA_API_KEY = os.getenv("DEEPINFRA_API_KEY")
+if not DEEPINFRA_API_KEY:
+    print("⚠️ Warning: DeepInfra API key not found in environment variables!")
+    # You can set a default for development, but don't commit this
+    DEEPINFRA_API_KEY = "default_key_for_dev"
+
+# Rest of your code remains the same...
 
 # 🎯 Function to query DeepInfra LLM and extract clean SQL
 def generate_sql_from_deepinfra(prompt: str) -> str:
