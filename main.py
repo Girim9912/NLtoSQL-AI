@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-DEEPINFRA_API_KEY="3Mudo9Hv8vmwLzs2UvQMb4fPBbkewT5q"
+DEEPINFRA_API_KEY="DEEPINFRA_API_KEY"
 
 if not DEEPINFRA_API_KEY:
     print("⚠️ Warning: DeepInfra API key not found in environment variables!")
