@@ -3,15 +3,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import sqlite3
 import requests
-import re
+import recd 
 import os
 from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
 
-# Get API key from environment variables
-DEEPINFRA_API_KEY = os.getenv("DEEPINFRA_API_KEY")
+DEEPINFRA_API_KEY="3Mudo9Hv8vmwLzs2UvQMb4fPBbkewT5q"
+
 if not DEEPINFRA_API_KEY:
     print("⚠️ Warning: DeepInfra API key not found in environment variables!")
     # You can set a default for development, but don't commit this
