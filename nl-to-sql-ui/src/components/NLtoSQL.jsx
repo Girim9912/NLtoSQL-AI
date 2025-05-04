@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import backgroundImage from "../assets/BackgroundIMG.png"; // ✅ background image
 
 function NLtoSQL() {
   const [query, setQuery] = useState("");
@@ -162,6 +163,10 @@ function NLtoSQL() {
   };
 
   return (
+  <div
+    className="min-h-screen bg-cover bg-center"
+    style={{ backgroundImage: `url(${backgroundImage})` }}
+  >
     <div className="max-w-6xl mx-auto p-6">
       <h1 className="text-3xl font-bold text-center mb-8">NLtoSQL AI Converter</h1>
       
@@ -335,7 +340,9 @@ function NLtoSQL() {
         </div>
       </div>
     </div>
+  </div>
   );
+
 }
 
 export default NLtoSQL;
