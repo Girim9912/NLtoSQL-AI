@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
-import backgroundImage from "../assets/BackgroundIMG.png";
 
 function NLtoSQL() {
   // Basic state
@@ -14,7 +13,7 @@ function NLtoSQL() {
   
   // Database information
   const [dbSchema, setDbSchema] = useState([]);
-  const [dbStats, setDbStats] = useState({
+  const [, setDbStats] = useState({
     size: 0,
     tables: 0,
     totalRows: 0,
@@ -33,15 +32,13 @@ function NLtoSQL() {
   const [theme, setTheme] = useState("light");
   const [showPromptBuilder, setShowPromptBuilder] = useState(false);
   const [notification, setNotification] = useState({ show: false, message: "", type: "" });
-  const [activeTab, setActiveTab] = useState("results"); // results, visualization, explain
-  const [pinnedQueries, setPinnedQueries] = useState([]);
+  const [activeTab, setActiveTab] = useState("results");
   const [filteredResults, setFilteredResults] = useState([]);
   const [filterValue, setFilterValue] = useState("");
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'ascending' });
-  const [showConnectionInfo, setShowConnectionInfo] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
   const [sqlExplanation, setSqlExplanation] = useState("");
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isSchemaOpen, setIsSchemaOpen] = useState(false);
   
   // Enhanced prompt builder
   const [promptTemplate, setPromptTemplate] = useState({
@@ -60,7 +57,7 @@ function NLtoSQL() {
   const queryInputRef = useRef(null);
   const resultsRef = useRef(null);
   
-  // Load history, theme and pinned queries from localStorage on initial render
+  // Load history and theme from localStorage on initial render
   useEffect(() => {
     const savedHistory = localStorage.getItem('nlsql_history');
     if (savedHistory) {
@@ -71,11 +68,6 @@ function NLtoSQL() {
     if (savedTheme) {
       setTheme(savedTheme);
       document.documentElement.classList.toggle('dark', savedTheme === 'dark');
-    }
-    
-    const savedPinnedQueries = localStorage.getItem('nlsql_pinned');
-    if (savedPinnedQueries) {
-      setPinnedQueries(JSON.parse(savedPinnedQueries));
     }
   }, []);
   
@@ -89,22 +81,10 @@ function NLtoSQL() {
         }
       }
       
-      // Ctrl/Cmd + / to toggle keyboard shortcuts help
-      if ((e.ctrlKey || e.metaKey) && e.key === '/') {
-        e.preventDefault();
-        setShowKeyboardShortcuts(prev => !prev);
-      }
-      
       // Ctrl/Cmd + L to focus on query input
       if ((e.ctrlKey || e.metaKey) && e.key === 'l') {
         e.preventDefault();
         queryInputRef.current?.focus();
-      }
-      
-      // Escape to close modals
-      if (e.key === 'Escape') {
-        setShowKeyboardShortcuts(false);
-        setShowConnectionInfo(false);
       }
     };
     
@@ -197,7 +177,7 @@ function NLtoSQL() {
         fetchDatabaseStats(response.data.session_id);
       }
       
-      showNotification("Upload successful!");
+      showNotification("Database uploaded successfully!");
     } catch (err) {
       console.error("Upload error:", err);
       setError(err.response?.data?.error || "Upload failed. Check file format and try again.");
@@ -235,7 +215,6 @@ function NLtoSQL() {
   
   const fetchDatabaseStats = async (sid) => {
     try {
-      // This endpoint would need to be implemented on the backend
       const response = await axios.get(`http://localhost:8000/database-stats/${sid}`);
       if (response.data.success) {
         setDbStats(response.data.stats);
@@ -271,7 +250,6 @@ function NLtoSQL() {
       if (numericColumn) {
         examples.push(`What is the average ${numericColumn.name} in ${mainTable.name}?`);
         examples.push(`Find the highest ${numericColumn.name} in ${mainTable.name}`);
-        examples.push(`Group records in ${mainTable.name} by a category and calculate total ${numericColumn.name}`);
       }
       
       // Find a text column for filtering example
@@ -368,67 +346,11 @@ function NLtoSQL() {
     setSql(item.sql);
   };
 
-  const clearHistory = () => {
-    setQueryHistory([]);
-    localStorage.removeItem('nlsql_history');
-    showNotification("History cleared!");
-  };
-
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
     setTheme(newTheme);
     localStorage.setItem('nlsql_theme', newTheme);
     document.documentElement.classList.toggle('dark', newTheme === 'dark');
-  };
-
-  const togglePromptBuilder = () => {
-    setShowPromptBuilder(!showPromptBuilder);
-  };
-  
-  const togglePinQuery = (queryText) => {
-    const index = pinnedQueries.indexOf(queryText);
-    let newPinned;
-    
-    if (index === -1) {
-      // Add to pinned
-      newPinned = [...pinnedQueries, queryText];
-    } else {
-      // Remove from pinned
-      newPinned = pinnedQueries.filter(q => q !== queryText);
-    }
-    
-    setPinnedQueries(newPinned);
-    localStorage.setItem('nlsql_pinned', JSON.stringify(newPinned));
-    
-    if (index === -1) {
-      showNotification("Query pinned!");
-    } else {
-      showNotification("Query unpinned");
-    }
-  };
-  
-  const requestSort = (key) => {
-    let direction = 'ascending';
-    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
-      direction = 'descending';
-    }
-    setSortConfig({ key, direction });
-  };
-  
-  const toggleFullscreen = () => {
-    if (!resultsRef.current) return;
-    
-    if (!isFullscreen) {
-      if (resultsRef.current.requestFullscreen) {
-        resultsRef.current.requestFullscreen();
-      }
-    } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen();
-      }
-    }
-    
-    setIsFullscreen(!isFullscreen);
   };
 
   const buildPrompt = () => {
@@ -494,648 +416,651 @@ function NLtoSQL() {
     showNotification("Results exported to CSV!");
   };
   
-  // Generate dummy visualization data
-  const renderVisualization = () => {
-    if (!results.length) return <div className="p-8 text-center">No data to visualize</div>;
-    
-    return (
-      <div className="p-4 text-center">
-        <div className="text-lg font-medium mb-4">Visualization placeholder</div>
-        <div className="bg-gray-200 dark:bg-gray-700 h-64 rounded-lg flex items-center justify-center">
-          <div className="text-gray-500 dark:text-gray-400">
-            <p>This would display a visualization of your query results.</p>
-            <p className="text-sm">Add a charting library like Chart.js or Recharts for implementation.</p>
-          </div>
-        </div>
-      </div>
-    );
+  const clearHistory = () => {
+    setQueryHistory([]);
+    localStorage.removeItem('nlsql_history');
+    showNotification("History cleared!");
+  };
+  
+  const requestSort = (key) => {
+    let direction = 'ascending';
+    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({ key, direction });
   };
 
-  const mainClass = theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-white';
-  const cardClass = theme === 'dark' ? 'bg-gray-800 text-white' : 'bg-white';
-
   return (
-    <div className={`min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 ${theme === 'dark' ? 'bg-gray-900 text-white' : ''}`}>
-      {/* Theme Toggle Button */}
-      <div className="absolute top-4 right-4 flex space-x-2">
-        <button 
-          onClick={() => setShowKeyboardShortcuts(true)}
-          className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
-          title="Keyboard shortcuts"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-          </svg>
-        </button>
-        
-        <button 
-          onClick={toggleTheme}
-          className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
-          title="Toggle theme"
-        >
-          {theme === 'dark' ? '🌞' : '🌙'}
-        </button>
-
-        <button 
-          onClick={() => setShowConnectionInfo(!showConnectionInfo)}
-          className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
-          title="Database info"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        </button>
-      </div>
-      
-      {/* Keyboard Shortcuts Modal */}
-      {showKeyboardShortcuts && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className={`p-6 rounded-lg shadow-xl max-w-md w-full ${theme === 'dark' ? 'bg-gray-800' : 'bg-white'}`}>
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold">Keyboard Shortcuts</h3>
-              <button 
-                onClick={() => setShowKeyboardShortcuts(false)}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="font-medium">Execute Query</span>
-                <span className="bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded text-sm">Ctrl + Enter</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-medium">Focus Query Input</span>
-                <span className="bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded text-sm">Ctrl + L</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-medium">Show Shortcuts</span>
-                <span className="bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded text-sm">Ctrl + /</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-medium">Close Dialogs</span>
-                <span className="bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded text-sm">Esc</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-      
-      {/* Database Connection Info Modal */}
-      {showConnectionInfo && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className={`p-6 rounded-lg shadow-xl max-w-md w-full ${theme === 'dark' ? 'bg-gray-800' : 'bg-white'}`}>
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold">Database Information</h3>
-              <button 
-                onClick={() => setShowConnectionInfo(false)}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="font-medium">File Size</span>
-                <span>{(dbStats.size / 1024).toFixed(2)} KB</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-medium">Tables</span>
-                <span>{dbSchema.length}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-medium">Session ID</span>
-                <span className="truncate max-w-[150px]">{sessionId || "None"}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-medium">Last Modified</span>
-                <span>{dbStats.lastModified || "Unknown"}</span>
-              </div>
-              
-              <hr className="border-gray-300 dark:border-gray-600" />
-              
-              <div className="pt-2">
-                <h4 className="font-medium mb-2">API Endpoints</h4>
-                <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                  <div>POST /upload - Upload database file</div>
-                  <div>GET /schemas/:session_id - Get database schema</div>
-                  <div>POST /generate-sql - Generate and execute SQL</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-      
+    <div className={`min-h-screen flex flex-col ${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
       {/* Notification Toast */}
       {notification.show && (
-        <div className={`fixed top-4 right-4 p-4 rounded-md shadow-md ${
+        <div className={`fixed top-4 right-4 p-4 rounded-md shadow-lg z-50 transform transition-transform duration-300 ease-in-out ${
           notification.type === 'error' ? 'bg-red-500 text-white' : 'bg-green-500 text-white'
-        } z-50`}>
+        }`}>
           {notification.message}
         </div>
       )}
       
-      <h1 className="text-4xl md:text-5xl font-bold text-center mb-8 drop-shadow-l">NLtoSQL AI Converter</h1>
-      <p className="text-lg md:text-xl text-center mb-12 max-w-2xl mx-auto drop-shadow-sm">Upload your database file and ask questions in natural language. Let AI convert it into SQL!</p>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 px-6 w-full max-w-7xl">
-        <div className="md:col-span-2">
-          <div className={`shadow-xl rounded-xl p-6 mb-6 ${cardClass}`}>
-            <h2 className="text-2xl font-bold mb-4">📁 Upload Your Data</h2>
-            <div className="flex flex-col md:flex-row gap-4 items-start">
-              <div className="flex-grow">
-                <label className="flex flex-col items-center px-4 py-6 rounded-lg cursor-pointer border-2 border-dashed border-gray-300 hover:border-blue-500 transition-colors">
-                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
-                  </svg>
-                  <span className="mt-2 text-base leading-normal">
-                    {file ? file.name : "Select a file"}
-                  </span>
-                  <input 
-                    type="file" 
-                    className="hidden" 
-                    accept=".csv,.txt,.xls,.xlsx,.db,.sqlite,.sqlite3"
-                    onChange={(e) => setFile(e.target.files[0])}
-                  />
-                </label>
-                <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 text-center">
-                  Supported formats: .csv, .txt, .xls, .xlsx, .db, .sqlite, .sqlite3
-                </p>
+      {/* Sidebar */}
+      <div className={`fixed top-0 left-0 h-full w-64 transition-all duration-300 transform ${
+        theme === 'dark' ? 'bg-gray-800' : 'bg-white'
+      } shadow-lg z-10`}>
+        <div className="p-4">
+          <h1 className="text-2xl font-bold mb-6">NLtoSQL AI</h1>
+          
+          {/* Database Upload Section */}
+          <div className="mb-6">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
+              Database
+            </h2>
+            <label className={`flex items-center justify-center h-24 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
+              theme === 'dark' 
+                ? 'border-gray-600 hover:border-blue-500 bg-gray-700 hover:bg-gray-600' 
+                : 'border-gray-300 hover:border-blue-500 bg-gray-50 hover:bg-gray-100'
+            } mb-2`}>
+              <div className="text-center">
+                <svg className="w-8 h-8 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                </svg>
+                <span className="mt-2 text-sm">
+                  {file ? file.name : "Select a database"}
+                </span>
+                <input 
+                  type="file" 
+                  className="hidden" 
+                  accept=".csv,.txt,.xls,.xlsx,.db,.sqlite,.sqlite3"
+                  onChange={(e) => setFile(e.target.files[0])}
+                />
               </div>
-              
-              <button
-                onClick={handleFileUpload}
-                disabled={isLoading || !file}
-                className={`px-4 py-2 rounded font-semibold ${
-                  isLoading ? "bg-gray-400" : "bg-blue-500 hover:bg-blue-600"
-                } text-white`}
-              >
-                {isLoading ? "Uploading..." : "Upload"}
-              </button>
-            </div>
+            </label>
+            
+            <button
+              onClick={handleFileUpload}
+              disabled={isLoading || !file}
+              className={`w-full py-2 px-4 rounded-lg font-medium text-sm transition-all ${
+                isLoading || !file
+                  ? 'bg-gray-300 dark:bg-gray-700 text-gray-600 dark:text-gray-400 cursor-not-allowed'
+                  : 'bg-blue-600 hover:bg-blue-700 text-white'
+              }`}
+            >
+              {isLoading ? "Uploading..." : "Upload Database"}
+            </button>
             
             {uploadProgress > 0 && uploadProgress < 100 && (
-              <div className="w-full mt-4 bg-gray-200 rounded-full h-2.5">
-                <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${uploadProgress}%` }}></div>
-              </div>
-            )}
-            
-            {sessionId && (
-                              <div className="mt-4 p-2 bg-green-50 text-green-700 dark:bg-green-900 dark:text-green-300 rounded">
-                File uploaded successfully! Session ID: {sessionId}
-              </div>
-            )}
-            
-            {error && (
-              <div className="mt-4 p-2 bg-red-50 text-red-700 dark:bg-red-900 dark:text-red-300 rounded">
-                {error}
+              <div className="w-full mt-2 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                <div className="bg-blue-600 h-1.5 rounded-full" style={{ width: `${uploadProgress}%` }}></div>
               </div>
             )}
           </div>
-        </div>
-        
-        {/* Left Column - Query Input */}
-        <div className="space-y-6">
-          <div className={`shadow-xl rounded-xl p-6 ${cardClass}`}>
-            <h2 className="text-2xl font-bold mb-4">💬 Ask Your Question</h2>
-            <div className="relative">
-              <textarea
-                ref={queryInputRef}
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="e.g. Show me the top 5 customers by total purchases"
-                className="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                rows={4}
-              />
-              <button
-                onClick={handleQuerySubmit}
-                disabled={isLoading || !sessionId}
-                className={`mt-4 px-4 py-2 rounded font-semibold ${
-                  isLoading ? "bg-gray-400" : "bg-blue-500 hover:bg-blue-600"
-                } text-white`}
-              >
-                {isLoading ? "Processing..." : "Generate SQL"}
-              </button>
-            </div>
+          
+          {/* Schema Browser */}
+          <div className="mb-6">
+            <button 
+              onClick={() => setIsSchemaOpen(!isSchemaOpen)}
+              className="flex items-center justify-between w-full text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2"
+            >
+              <span>Database Schema</span>
+              <span>{isSchemaOpen ? '−' : '+'}</span>
+            </button>
             
-            <div className="mt-4">
-              <button
-                onClick={togglePromptBuilder}
-                className="text-sm text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-              >
-                {showPromptBuilder ? "Hide SQL Builder" : "Show SQL Builder"}
-              </button>
-              
-              {showPromptBuilder && (
-                <div className="mt-4 p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
-                  <h3 className="font-medium mb-3">SQL Query Builder</h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-sm font-medium mb-1">Action</label>
-                      <select
-                        value={promptTemplate.action}
-                        onChange={(e) => setPromptTemplate({...promptTemplate, action: e.target.value})}
-                        className="w-full p-2 border rounded dark:bg-gray-700"
-                      >
-                        <option value="show">Show</option>
-                        <option value="select">Select</option>
-                        <option value="count">Count</option>
-                        <option value="sum">Sum</option>
-                        <option value="average">Average</option>
-                        <option value="find">Find</option>
-                        <option value="list">List</option>
-                      </select>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium mb-1">Modifier</label>
-                      <input
-                        type="text"
-                        value={promptTemplate.modifier}
-                        onChange={(e) => setPromptTemplate({...promptTemplate, modifier: e.target.value})}
-                        placeholder="e.g. distinct, top 5"
-                        className="w-full p-2 border rounded dark:bg-gray-700"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium mb-1">Table</label>
-                      <select
-                        value={promptTemplate.table}
-                        onChange={(e) => setPromptTemplate({...promptTemplate, table: e.target.value})}
-                        className="w-full p-2 border rounded dark:bg-gray-700"
-                      >
-                        {dbSchema.map((table) => (
-                          <option key={table.name} value={table.name}>{table.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium mb-1">Join Table</label>
-                      <select
-                        value={promptTemplate.joinTable}
-                        onChange={(e) => setPromptTemplate({...promptTemplate, joinTable: e.target.value})}
-                        className="w-full p-2 border rounded dark:bg-gray-700"
-                      >
-                        <option value="">None</option>
-                        {dbSchema.map((table) => (
-                          <option key={table.name} value={table.name}>{table.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                    
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium mb-1">Join Condition</label>
-                      <input
-                        type="text"
-                        value={promptTemplate.joinCondition}
-                        onChange={(e) => setPromptTemplate({...promptTemplate, joinCondition: e.target.value})}
-                        placeholder="e.g. table1.id = table2.table1_id"
-                        className="w-full p-2 border rounded dark:bg-gray-700"
-                        disabled={!promptTemplate.joinTable}
-                      />
-                    </div>
-                    
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium mb-1">Condition (WHERE)</label>
-                      <input
-                        type="text"
-                        value={promptTemplate.condition}
-                        onChange={(e) => setPromptTemplate({...promptTemplate, condition: e.target.value})}
-                        placeholder="e.g. age > 30 AND status = 'active'"
-                        className="w-full p-2 border rounded dark:bg-gray-700"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium mb-1">Group By</label>
-                      <input
-                        type="text"
-                        value={promptTemplate.groupBy}
-                        onChange={(e) => setPromptTemplate({...promptTemplate, groupBy: e.target.value})}
-                        placeholder="e.g. department, category"
-                        className="w-full p-2 border rounded dark:bg-gray-700"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium mb-1">Order By</label>
-                      <input
-                        type="text"
-                        value={promptTemplate.orderBy}
-                        onChange={(e) => setPromptTemplate({...promptTemplate, orderBy: e.target.value})}
-                        placeholder="e.g. created_at DESC"
-                        className="w-full p-2 border rounded dark:bg-gray-700"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium mb-1">Limit</label>
-                      <input
-                        type="number"
-                        value={promptTemplate.limit}
-                        onChange={(e) => setPromptTemplate({...promptTemplate, limit: e.target.value})}
-                        placeholder="e.g. 10"
-                        className="w-full p-2 border rounded dark:bg-gray-700"
-                      />
-                    </div>
+            {isSchemaOpen && dbSchema.length > 0 && (
+              <div className={`p-2 rounded-lg text-sm ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                {dbSchema.map((table) => (
+                  <div key={table.name} className="mb-2">
+                    <div className="font-medium">{table.name}</div>
+                    <ul className="ml-3 text-xs text-gray-500 dark:text-gray-400">
+                      {table.columns.map((column) => (
+                        <li key={column.name}>
+                          {column.name} <span className="opacity-70">({column.type})</span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                  
-                  <button
-                    onClick={buildPrompt}
-                    className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                  >
-                    Build Query
-                  </button>
-                </div>
-              )}
-            </div>
+                ))}
+              </div>
+            )}
+            
+            {isSchemaOpen && dbSchema.length === 0 && (
+              <div className="text-sm text-gray-500 dark:text-gray-400 italic">
+                No schema available. Upload a database first.
+              </div>
+            )}
           </div>
           
-          {/* Examples Section */}
-          <div className={`shadow-xl rounded-xl p-6 ${cardClass}`}>
-            <h2 className="text-2xl font-bold mb-4">💡 Example Queries</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {examples.map((example, index) => (
-                <button
-                  key={index}
-                  onClick={() => useExample(example)}
-                  className="p-3 text-left border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                >
-                  {example}
-                </button>
-              ))}
-            </div>
-          </div>
-          
-          {/* Query History */}
-          <div className={`shadow-xl rounded-xl p-6 ${cardClass}`}>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold">🕒 Query History</h2>
-              <button
-                onClick={clearHistory}
-                className="text-sm text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-                disabled={queryHistory.length === 0}
+          {/* History */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-2">
+              <button 
+                onClick={() => setIsHistoryOpen(!isHistoryOpen)}
+                className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400"
               >
-                Clear All
+                <span>Query History</span>
               </button>
+              <div>
+                <button 
+                  onClick={() => setIsHistoryOpen(!isHistoryOpen)}
+                  className="text-gray-500 dark:text-gray-400 mr-2"
+                >
+                  {isHistoryOpen ? '−' : '+'}
+                </button>
+                {queryHistory.length > 0 && (
+                  <button
+                    onClick={clearHistory}
+                    className="text-xs text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
             </div>
             
-            {queryHistory.length === 0 ? (
-              <p className="text-gray-500 dark:text-gray-400">No queries yet</p>
-            ) : (
-              <div className="space-y-3 max-h-96 overflow-y-auto">
+            {isHistoryOpen && queryHistory.length > 0 && (
+              <div className={`max-h-64 overflow-y-auto text-sm rounded-lg ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-100'}`}>
                 {queryHistory.map((item, index) => (
-                  <div key={index} className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-medium">{item.query}</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                          {new Date(item.timestamp).toLocaleString()}
-                        </p>
-                      </div>
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={() => useHistoryItem(item)}
-                          className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-                          title="Use this query"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.707-10.293a1 1 0 00-1.414-1.414l-3 3a1 1 0 000 1.414l3 3a1 1 0 001.414-1.414L9.414 11H13a1 1 0 100-2H9.414l1.293-1.293z" clipRule="evenodd" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => togglePinQuery(item.query)}
-                          className={`${
-                            pinnedQueries.includes(item.query) 
-                              ? 'text-yellow-500 hover:text-yellow-700' 
-                              : 'text-gray-400 hover:text-gray-600'
-                          }`}
-                          title={pinnedQueries.includes(item.query) ? "Unpin query" : "Pin query"}
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                    <div className="mt-2 text-sm bg-gray-100 dark:bg-gray-700 p-2 rounded overflow-x-auto">
-                      <code>{item.sql}</code>
-                    </div>
-                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                      {item.rowCount} rows returned
+                  <div 
+                    key={index} 
+                    className="p-2 border-b dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer"
+                    // eslint-disable-next-line react-hooks/rules-of-hooks
+                    onClick={() => useHistoryItem(item)}
+                  >
+                    <div className="font-medium truncate">{item.query}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      {new Date(item.timestamp).toLocaleString()}
                     </div>
                   </div>
                 ))}
               </div>
             )}
-          </div>
-        </div>
-        
-        {/* Right Column - Results */}
-        <div className="space-y-6">
-          {/* SQL Query Display */}
-          <div className={`shadow-xl rounded-xl p-6 ${cardClass}`}>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold">🔍 Generated SQL</h2>
-              {sql && (
-                <button
-                  onClick={() => copyToClipboard(sql)}
-                  className="flex items-center text-sm text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                  </svg>
-                  Copy
-                </button>
-              )}
-            </div>
             
-            {sql ? (
-              <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg overflow-x-auto">
-                <pre className="text-sm">{sql}</pre>
-              </div>
-            ) : (
-              <p className="text-gray-500 dark:text-gray-400">No SQL generated yet</p>
-            )}
-            
-            {sqlExplanation && (
-              <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900 dark:bg-opacity-30 rounded-lg">
-                <h3 className="font-medium mb-1">SQL Explanation</h3>
-                <p className="text-sm">{sqlExplanation}</p>
+            {isHistoryOpen && queryHistory.length === 0 && (
+              <div className="text-sm text-gray-500 dark:text-gray-400 italic">
+                No query history yet.
               </div>
             )}
           </div>
           
-          {/* Results Display */}
-          <div className={`shadow-xl rounded-xl p-6 ${cardClass}`} ref={resultsRef}>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold">📊 Results</h2>
-              <div className="flex space-x-2">
-                {results.length > 0 && (
-                  <>
-                    <button
-                      onClick={exportToCSV}
-                      className="flex items-center text-sm text-green-500 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                      </svg>
-                      Export
-                    </button>
-                    <button
-                      onClick={toggleFullscreen}
-                      className="flex items-center text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-                      </svg>
-                      Fullscreen
-                    </button>
-                  </>
-                )}
+          {/* Settings */}
+          <div className="fixed bottom-0 left-0 w-64 p-4 border-t dark:border-gray-700">
+            <button 
+              onClick={toggleTheme} 
+              className={`flex items-center justify-center w-full p-2 rounded-lg ${
+                theme === 'dark' 
+                  ? 'bg-gray-700 hover:bg-gray-600' 
+                  : 'bg-gray-100 hover:bg-gray-200'
+              }`}
+            >
+              <span className="mr-2">{theme === 'dark' ? '🌞' : '🌙'}</span>
+              <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      {/* Main Content */}
+      <div className="ml-64 flex-1 flex flex-col">
+        {/* Header */}
+        <header className={`flex items-center justify-between px-6 py-4 ${theme === 'dark' ? 'bg-gray-800' : 'bg-white'} shadow-sm`}>
+          <div>
+            {sessionId ? (
+              <div className="flex items-center">
+                <div className="w-2 h-2 rounded-full bg-green-500 mr-2"></div>
+                <span className="text-sm text-gray-500 dark:text-gray-400">Connected to database</span>
               </div>
-            </div>
-            
-            {/* Results Tabs */}
-            <div className="border-b border-gray-200 dark:border-gray-700 mb-4">
-              <nav className="-mb-px flex space-x-8">
+            ) : (
+              <div className="flex items-center">
+                <div className="w-2 h-2 rounded-full bg-gray-400 mr-2"></div>
+                <span className="text-sm text-gray-500 dark:text-gray-400">No database connected</span>
+              </div>
+            )}
+          </div>
+          <div className="text-sm text-gray-500 dark:text-gray-400">
+            {sessionId && dbSchema.length > 0 && (
+              <span>{dbSchema.length} tables • {filteredResults.length} rows</span>
+            )}
+          </div>
+        </header>
+        
+        {/* Main Query Area */}
+        <div className="flex-1 p-6">
+          {/* Query Input */}
+          <div className={`${theme === 'dark' ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg mb-6`}>
+            <div className="p-4">
+              <div className="mb-2 flex justify-between items-center">
+                <h2 className="text-lg font-semibold">Ask in natural language</h2>
                 <button
-                  onClick={() => setActiveTab("results")}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                    activeTab === "results"
-                      ? "border-blue-500 text-blue-600 dark:text-blue-400"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"
+                  onClick={() => setShowPromptBuilder(!showPromptBuilder)}
+                  className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                >
+                  {showPromptBuilder ? "Hide Query Builder" : "Show Query Builder"}
+                </button>
+              </div>
+              
+              <div className="relative">
+                <textarea
+                  ref={queryInputRef}
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Ask a question about your data in natural language..."
+                  className={`w-full p-4 text-lg border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    theme === 'dark' 
+                      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+                  }`}
+                  rows={4}
+                />
+                <button
+                  onClick={handleQuerySubmit}
+                  disabled={isLoading || !sessionId}
+                  className={`absolute bottom-4 right-4 p-2 rounded-full transition-colors ${
+                    isLoading || !sessionId
+                      ? 'bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400 cursor-not-allowed'
+                      : 'bg-blue-600 hover:bg-blue-700 text-white'
                   }`}
                 >
-                  Results
+                  {isLoading ? (
+                    <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  ) : (
+                    <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z" clipRule="evenodd" />
+                    </svg>
+                  )}
                 </button>
-                <button
-                  onClick={() => setActiveTab("visualization")}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                    activeTab === "visualization"
-                      ? "border-blue-500 text-blue-600 dark:text-blue-400"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"
-                  }`}
-                >
-                  Visualization
-                </button>
-                <button
-                  onClick={() => setActiveTab("explain")}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                    activeTab === "explain"
-                      ? "border-blue-500 text-blue-600 dark:text-blue-400"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"
-                  }`}
-                >
-                  Explain
-                </button>
-              </nav>
-            </div>
-            
-            {/* Tab Content */}
-            <div>
-              {activeTab === "results" && (
-                <>
-                  {results.length > 0 ? (
+              </div>
+              
+              {/* Examples */}
+              <div className="mt-4">
+                <div className="text-sm text-gray-500 dark:text-gray-400 mb-2">Examples:</div>
+                <div className="flex flex-wrap gap-2">
+                  {examples.slice(0, 4).map((example, index) => (
+                    <button
+                      key={index}
+                      // eslint-disable-next-line react-hooks/rules-of-hooks
+                      onClick={() => { useExample(example); }}
+                      className={`px-3 py-1 rounded-full text-xs ${
+                        theme === 'dark'
+                          ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                          : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                      }`}
+                    >
+                      {example}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Query Builder */}
+              {showPromptBuilder && (
+                <div className={`mt-4 p-4 border rounded-lg ${
+                  theme === 'dark' ? 'border-gray-700 bg-gray-700' : 'border-gray-200 bg-gray-50'
+                }`}>
+                  <h3 className="font-medium mb-3">Query Builder</h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <div className="mb-4 flex justify-between items-center">
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                          Showing {filteredResults.length} of {results.length} rows
-                        </div>
+  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Action</label>
+  <select
+    value={promptTemplate.action}
+    onChange={(e) => setPromptTemplate(prev => ({...prev, action: e.target.value}))}
+    className={`w-full p-2 rounded text-sm ${
+      theme === 'dark' 
+        ? 'bg-gray-600 border-gray-600 text-white' 
+        : 'bg-white border-gray-300 text-gray-900'
+    }`}
+  >
+    <option value="show">Show/Select</option>
+    <option value="count">Count</option>
+    <option value="find">Find</option>
+    <option value="calculate">Calculate</option>
+    <option value="summarize">Summarize</option>
+  </select>
+</div>
+
+<div>
+  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Modifier</label>
+  <input
+    type="text"
+    value={promptTemplate.modifier}
+    onChange={(e) => setPromptTemplate(prev => ({...prev, modifier: e.target.value}))}
+    placeholder="all, average, sum, etc."
+    className={`w-full p-2 rounded text-sm ${
+      theme === 'dark' 
+        ? 'bg-gray-600 border-gray-600 text-white placeholder-gray-400' 
+        : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+    }`}
+  />
+</div>
+
+<div>
+  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">From Table</label>
+  <select
+    value={promptTemplate.table}
+    onChange={(e) => setPromptTemplate(prev => ({...prev, table: e.target.value}))}
+    className={`w-full p-2 rounded text-sm ${
+      theme === 'dark' 
+        ? 'bg-gray-600 border-gray-600 text-white' 
+        : 'bg-white border-gray-300 text-gray-900'
+    }`}
+  >
+    <option value="">Select a table</option>
+    {dbSchema.map(table => (
+      <option key={table.name} value={table.name}>{table.name}</option>
+    ))}
+  </select>
+</div>
+
+<div>
+  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Where Condition</label>
+  <input
+    type="text"
+    value={promptTemplate.condition}
+    onChange={(e) => setPromptTemplate(prev => ({...prev, condition: e.target.value}))}
+    placeholder="column > value, etc."
+    className={`w-full p-2 rounded text-sm ${
+      theme === 'dark' 
+        ? 'bg-gray-600 border-gray-600 text-white placeholder-gray-400' 
+        : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+    }`}
+  />
+</div>
+
+<div>
+  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Join Table</label>
+  <select
+    value={promptTemplate.joinTable}
+    onChange={(e) => setPromptTemplate(prev => ({...prev, joinTable: e.target.value}))}
+    className={`w-full p-2 rounded text-sm ${
+      theme === 'dark' 
+        ? 'bg-gray-600 border-gray-600 text-white' 
+        : 'bg-white border-gray-300 text-gray-900'
+    }`}
+  >
+    <option value="">No join</option>
+    {dbSchema.map(table => (
+      <option key={table.name} value={table.name}>{table.name}</option>
+    ))}
+  </select>
+</div>
+
+<div>
+  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Join Condition</label>
+  <input
+    type="text"
+    value={promptTemplate.joinCondition}
+    onChange={(e) => setPromptTemplate(prev => ({...prev, joinCondition: e.target.value}))}
+    placeholder="table1.id = table2.id"
+    className={`w-full p-2 rounded text-sm ${
+      theme === 'dark' 
+        ? 'bg-gray-600 border-gray-600 text-white placeholder-gray-400' 
+        : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+    }`}
+  />
+</div>
+
+<div>
+  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Group By</label>
+  <input
+    type="text"
+    value={promptTemplate.groupBy}
+    onChange={(e) => setPromptTemplate(prev => ({...prev, groupBy: e.target.value}))}
+    placeholder="column name"
+    className={`w-full p-2 rounded text-sm ${
+      theme === 'dark' 
+        ? 'bg-gray-600 border-gray-600 text-white placeholder-gray-400' 
+        : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+    }`}
+  />
+</div>
+
+<div>
+  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Order By</label>
+  <input
+    type="text"
+    value={promptTemplate.orderBy}
+    onChange={(e) => setPromptTemplate(prev => ({...prev, orderBy: e.target.value}))}
+    placeholder="column name ASC/DESC"
+    className={`w-full p-2 rounded text-sm ${
+      theme === 'dark' 
+        ? 'bg-gray-600 border-gray-600 text-white placeholder-gray-400' 
+        : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+    }`}
+  />
+</div>
+
+<div>
+  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Limit</label>
+  <input
+    type="text"
+    value={promptTemplate.limit}
+    onChange={(e) => setPromptTemplate(prev => ({...prev, limit: e.target.value}))}
+    placeholder="number"
+    className={`w-full p-2 rounded text-sm ${
+      theme === 'dark' 
+        ? 'bg-gray-600 border-gray-600 text-white placeholder-gray-400' 
+        : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+    }`}
+  />
+</div>
+                  </div>
+                  
+                  <div className="mt-4 flex justify-end">
+                    <button
+                      onClick={buildPrompt}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm"
+                    >
+                      Build Query
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* Results Area */}
+          <div className={`${theme === 'dark' ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg`}>
+            {/* Tab Navigation */}
+            <div className="flex border-b dark:border-gray-700">
+              <button
+                onClick={() => setActiveTab('results')}
+                className={`px-4 py-3 text-sm font-medium ${
+                  activeTab === 'results'
+                    ? theme === 'dark'
+                      ? 'border-b-2 border-blue-500 text-blue-500'
+                      : 'border-b-2 border-blue-600 text-blue-600'
+                    : 'text-gray-500 dark:text-gray-400'
+                }`}
+              >
+                Results
+              </button>
+              <button
+                onClick={() => setActiveTab('sql')}
+                className={`px-4 py-3 text-sm font-medium ${
+                  activeTab === 'sql'
+                    ? theme === 'dark'
+                      ? 'border-b-2 border-blue-500 text-blue-500'
+                      : 'border-b-2 border-blue-600 text-blue-600'
+                    : 'text-gray-500 dark:text-gray-400'
+                }`}
+              >
+                SQL Query
+              </button>
+              <button
+                onClick={() => setActiveTab('explanation')}
+                className={`px-4 py-3 text-sm font-medium ${
+                  activeTab === 'explanation'
+                    ? theme === 'dark'
+                      ? 'border-b-2 border-blue-500 text-blue-500'
+                      : 'border-b-2 border-blue-600 text-blue-600'
+                    : 'text-gray-500 dark:text-gray-400'
+                }`}
+              >
+                Explanation
+              </button>
+            </div>
+            
+            {/* Results Tab */}
+            <div className={activeTab === 'results' ? 'block' : 'hidden'}>
+              {filteredResults.length > 0 ? (
+                <>
+                  {/* Results Controls */}
+                  <div className="p-4 flex flex-wrap justify-between items-center border-b dark:border-gray-700">
+                    <div className="mb-2 sm:mb-0">
+                      <span className="text-sm text-gray-500 dark:text-gray-400">
+                        {filteredResults.length} rows
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <div className="relative">
                         <input
                           type="text"
-                          placeholder="Filter results..."
                           value={filterValue}
                           onChange={(e) => setFilterValue(e.target.value)}
-                          className="p-2 border rounded text-sm dark:bg-gray-700"
+                          placeholder="Filter results..."
+                          className={`pl-8 pr-4 py-1 text-sm rounded ${
+                            theme === 'dark'
+                              ? 'bg-gray-700 text-white placeholder-gray-400'
+                              : 'bg-gray-100 text-gray-900 placeholder-gray-500'
+                          }`}
                         />
+                        <svg className="w-4 h-4 absolute left-2.5 top-1.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
                       </div>
                       
-                      <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                          <thead className="bg-gray-50 dark:bg-gray-700">
-                            <tr>
-                              {Object.keys(results[0]).map((key) => (
-                                <th
-                                  key={key}
-                                  scope="col"
-                                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
-                                  onClick={() => requestSort(key)}
-                                >
-                                  <div className="flex items-center">
-                                    {key}
-                                    {sortConfig.key === key && (
-                                      <span className="ml-1">
-                                        {sortConfig.direction === 'ascending' ? '↑' : '↓'}
-                                      </span>
-                                    )}
-                                  </div>
-                                </th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
-                            {filteredResults.map((row, rowIndex) => (
-                              <tr key={rowIndex} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                                {Object.values(row).map((value, colIndex) => (
-                                  <td key={colIndex} className="px-4 py-2 whitespace-nowrap text-sm">
-                                    {value === null || value === undefined ? (
-                                      <span className="text-gray-400 italic">NULL</span>
-                                    ) : (
-                                      String(value)
-                                    )}
-                                  </td>
-                                ))}
-                              </tr>
+                      <button
+                        onClick={exportToCSV}
+                        className={`px-3 py-1 text-xs rounded ${
+                          theme === 'dark'
+                            ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                            : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                        }`}
+                      >
+                        Export CSV
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {/* Results Table */}
+                  <div className="overflow-x-auto" ref={resultsRef}>
+                    <table className="w-full">
+                      <thead className={theme === 'dark' ? 'bg-gray-700' : 'bg-gray-50'}>
+                        <tr>
+                          {Object.keys(filteredResults[0]).map((key) => (
+                            <th
+                              key={key}
+                              onClick={() => requestSort(key)}
+                              className={`px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer`}
+                            >
+                              <div className="flex items-center space-x-1">
+                                <span>{key}</span>
+                                {sortConfig.key === key && (
+                                  <span>
+                                    {sortConfig.direction === 'ascending' ? '↑' : '↓'}
+                                  </span>
+                                )}
+                              </div>
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredResults.map((row, rowIndex) => (
+                          <tr
+                            key={rowIndex}
+                            className={`${
+                              rowIndex % 2 === 0
+                                ? theme === 'dark' ? 'bg-gray-800' : 'bg-white'
+                                : theme === 'dark' ? 'bg-gray-750' : 'bg-gray-50'
+                            } hover:bg-gray-100 dark:hover:bg-gray-700`}
+                          >
+                            {Object.entries(row).map(([, value], cellIndex) => (
+                              <td key={cellIndex} className="px-4 py-2 text-sm whitespace-nowrap">
+                                {value === null ? (
+                                  <span className="text-gray-400">NULL</span>
+                                ) : typeof value === 'boolean' ? (
+                                  String(value)
+                                ) : (
+                                  String(value)
+                                )}
+                              </td>
                             ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-gray-500 dark:text-gray-400">
-                      {isLoading ? "Loading results..." : "No results to display"}
-                    </p>
-                  )}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </>
-              )}
-              
-              {activeTab === "visualization" && renderVisualization()}
-              
-              {activeTab === "explain" && (
-                <div>
-                  {sqlExplanation ? (
-                    <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                      <h3 className="font-medium mb-2">Query Explanation</h3>
-                      <p className="text-sm">{sqlExplanation}</p>
+              ) : (
+                <div className="p-8 text-center">
+                  {isLoading ? (
+                    <div className="flex flex-col items-center">
+                      <svg className="animate-spin h-8 w-8 text-blue-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span className="text-gray-500 dark:text-gray-400">Processing your query...</span>
                     </div>
+                  ) : error ? (
+                    <div className="text-red-500">{error}</div>
                   ) : (
-                    <p className="text-gray-500 dark:text-gray-400">
-                      {sql ? "No explanation available" : "Generate a query first to see its explanation"}
-                    </p>
+                    <div className="text-gray-500 dark:text-gray-400">
+                      {sessionId ? "Run a query to see results" : "Upload a database and run a query to see results"}
+                    </div>
                   )}
+                </div>
+              )}
+            </div>
+            
+            {/* SQL Tab */}
+            <div className={activeTab === 'sql' ? 'block p-4' : 'hidden'}>
+              {sql ? (
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <h3 className="font-medium">Generated SQL</h3>
+                    <button
+                      onClick={() => copyToClipboard(sql)}
+                      className={`px-2 py-1 text-xs rounded ${
+                        theme === 'dark'
+                          ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                          : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                      }`}
+                    >
+                      Copy
+                    </button>
+                  </div>
+                  <pre className={`p-4 rounded overflow-x-auto ${
+                    theme === 'dark' ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {sql}
+                  </pre>
+                </div>
+              ) : (
+                <div className="text-gray-500 dark:text-gray-400 text-center">
+                  {isLoading ? "Generating SQL..." : "Run a query to see the generated SQL"}
+                </div>
+              )}
+            </div>
+            
+            {/* Explanation Tab */}
+            <div className={activeTab === 'explanation' ? 'block p-4' : 'hidden'}>
+              {sqlExplanation ? (
+                <div className={`p-4 rounded ${
+                  theme === 'dark' ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-800'
+                }`}>
+                  {sqlExplanation}
+                </div>
+              ) : (
+                <div className="text-gray-500 dark:text-gray-400 text-center">
+                  {isLoading ? "Generating explanation..." : "Run a query to see an explanation"}
                 </div>
               )}
             </div>
           </div>
         </div>
       </div>
-      
-      <footer className="mt-12 mb-8 text-center text-sm text-gray-500 dark:text-gray-400">
-        <p>NLtoSQL AI Converter - Convert natural language to SQL queries with AI</p>
-        <p className="mt-1">Built with React, FastAPI, and OpenAI</p>
-      </footer>
     </div>
   );
 }
