@@ -1,0 +1,19 @@
+models/
+.env"models/" 
+# Python
+__pycache__/
+*.py[cod]
+*.log
+
+# Virtual environment
+venv/
+
+# Databases and temp files
+*.db
+*.csv
+*.xlsx
+temp/
+
+# OS or IDE files
+.DS_Store
+*.swp
