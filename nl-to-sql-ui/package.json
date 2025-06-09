@@ -3,9 +3,11 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "homepage": "https://Girim9912.github.io/NLtoSQL-AI",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "postbuild": "copy dist\\\\index.html dist\\\\404.html",
     "lint": "eslint .",
     "preview": "vite preview",
     "predeploy": "npm run build",
