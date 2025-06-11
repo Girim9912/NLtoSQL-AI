@@ -39,7 +39,7 @@ app = FastAPI(
 # Enhanced CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000","https://n-lto-sql-ai-465p.vercel.app/", "https://yourdomain.com", "https://n-lto-sql-ai.vercel.app/"],
+    allow_origins=["http://localhost:5173","https://n-lto-sql-ai-465p-git-main-giris-projects-fc0cd053.vercel.app/", "http://localhost:3000","https://n-lto-sql-ai-465p.vercel.app/", "https://n-lto-sql-ai.vercel.app/"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
