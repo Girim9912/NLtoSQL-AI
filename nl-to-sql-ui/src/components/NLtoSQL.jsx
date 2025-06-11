@@ -11,6 +11,7 @@ function NLtoSQL() {
   const [file, setFile] = useState(null);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
   
   // Database information
   const [dbSchema, setDbSchema] = useState([]);
@@ -181,10 +182,10 @@ function NLtoSQL() {
     setUploadProgress(0);
     
     try {
-      const response = await axios.post("http://localhost:8000/upload", formData, {
-        onUploadProgress: (progressEvent) => {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          setUploadProgress(percentCompleted);
+        const response = await axios.post(`${API_BASE_URL}/upload`, formData, { // Changed
+          onUploadProgress: (progressEvent) => {
+           const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            setUploadProgress(percentCompleted);
         }
       });
       
@@ -211,7 +212,7 @@ function NLtoSQL() {
 
   const fetchSchema = async (sid) => {
     try {
-      const response = await axios.get(`http://localhost:8000/schemas/${sid}`);
+      const response = await axios.get(`<span class="math-inline">\{API\_BASE\_URL\}/schemas/</span>{sid}`); // Changed
       if (response.data.success) {
         setDbSchema(response.data.tables);
         
@@ -236,7 +237,7 @@ function NLtoSQL() {
   const fetchDatabaseStats = async (sid) => {
     try {
       // This endpoint would need to be implemented on the backend
-      const response = await axios.get(`http://localhost:8000/database-stats/${sid}`);
+      const response = await axios.get(`<span class="math-inline">\{API\_BASE\_URL\}/database\-stats/</span>{sid}`); // Changed
       if (response.data.success) {
         setDbStats(response.data.stats);
       }
@@ -306,9 +307,7 @@ function NLtoSQL() {
     setSqlExplanation("");
     
     try {
-      const response = await axios.post("http://localhost:8000/generate-sql", {
-        query,
-        session_id: sessionId,
+      const response = await axios.post(`${API_BASE_URL}/generate-sql`, { query,session_id: sessionId,
       });
       
       setSql(response.data.sql);
@@ -330,7 +329,7 @@ function NLtoSQL() {
       
       // Try to get SQL explanation
       try {
-        const explainResponse = await axios.post("http://localhost:8000/explain-sql", {
+        const explainResponse = await axios.post(`${API_BASE_URL}/explain-sql`, { // Changed
           sql: response.data.sql,
           session_id: sessionId,
         });
