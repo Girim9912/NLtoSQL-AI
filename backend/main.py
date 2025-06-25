@@ -36,10 +36,16 @@ app = FastAPI(
     version="0.3.0"
 )
 
-# Enhanced CORS configuration
+# Enhanced CORS configuration for Render deployment
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000", "https://yourdomain.com"],
+    allow_origins=[
+        "http://localhost:5173", 
+        "http://localhost:3000", 
+        "https://yourdomain.com",
+        "https://*.vercel.app",
+        "https://vercel.app"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -486,6 +492,14 @@ async def health_check():
         "active_sessions": len(session_manager.user_db_map)
     }
 
+# Root endpoint for health check
+@app.get("/")
+async def root():
+    """Root endpoint."""
+    return {"message": "NLtoSQL AI Backend is running", "status": "healthy"}
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    # Get port from environment variable for Render deployment
+    port = int(os.getenv("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)

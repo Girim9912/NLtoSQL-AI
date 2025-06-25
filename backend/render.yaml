@@ -1,10 +1,12 @@
 services:
   - type: web
-    name: nl-to-sql-api
-    env: python
-    buildCommand: "pip install -r requirements.txt"
-    startCommand: "uvicorn main:app --host 0.0.0.0 --port 10000"
+    name: nlsql-backend
+    env: node
     plan: free
+    buildCommand: npm install
+    startCommand: npm start
     envVars:
-      - key: DEEPINFRA_API_KEY
-        value: cxCyZHFUFCWryiCZlzfW3PitHXakdumc
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
