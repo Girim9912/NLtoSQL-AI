@@ -1,7 +1,7 @@
+# Model files
 models/
 *.bin
 *.pt
-.env
 
 # Dependency directories
 node_modules/
@@ -12,7 +12,7 @@ yarn-error.log
 dist/
 build/
 
-# Environment files
+# Environment files (sensitive information)
 .env
 *.env
 .env.local
@@ -25,18 +25,28 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# IDE and editor directories
+# Python virtual environment
+venv/
+
+# Python testing and type checking caches
+.pytest_cache/
+.mypy_cache/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# IDE and editor directories and files
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# OS generated files
+# Operating system specific files
 .DS_Store
 Thumbs.db
 
-# Temporary files
+# Temporary files and logs
 temp/
 *.log
 
