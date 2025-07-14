@@ -4,3 +4,5 @@ backend/requirements and configuration file.txt
 backend/readme and testing scripts.txt
 backend/.gitignore
 backend/requirements.txt
+venv
+database/
